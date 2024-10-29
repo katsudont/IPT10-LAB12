@@ -1,10 +1,5 @@
 <?php
 
-session_start();
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require "vendor/autoload.php";
 require "init.php";
 
@@ -17,10 +12,7 @@ try {
     $router = new \Bramus\Router\Router();
 
     // Define routes
-    $router->get('/', function() {
-        session_destroy();
-        echo 'Exam Registration <a href="/register">Click Here</a>';
-    });
+    $router->get('/', '\App\Controllers\HomeController@registrationForm');
 
     $router->get('/register', '\App\Controllers\ExamController@registrationForm');
     $router->post('/register', '\App\Controllers\ExamController@register');
