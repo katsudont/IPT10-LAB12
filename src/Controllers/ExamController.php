@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\Question;
+use App\Models\User;
 use App\Models\UserAnswer;
 
 class ExamController extends BaseController
@@ -18,12 +19,37 @@ class ExamController extends BaseController
     {
         $this->initializeSession();
         $data = $_POST;
-        // Save the registration to database
-        $_SESSION['user_id'] = 1; // Replace this literal value with the actual user ID from new registration
-        $_SESSION['complete_name'] = $data['complete_name'];
-        $_SESSION['email'] = $data['email'];
+    
+        try {
+            // Save the registration to the database
+            $user = new User();
+            $save_result = $user->save($data);
+    
+            if ($save_result > 0) {
+                // Set session variables only after successful registration
+                $_SESSION['user_id'] = $save_result; // Use the actual user ID from the database
+                $_SESSION['complete_name'] = $data['complete_name'];
+                $_SESSION['email'] = $data['email'];
+    
+                return $this->render('login-form'); // Registration success page
+            } else {
+                throw new \Exception("There was an error during registration. Please try again.");
+            }
+        } catch (\Exception $e) {
+            echo "Error: " . $e->getMessage();
+        }
+    }
 
-        return $this->render('pre-exam', $data);
+    public function loginForm()
+    {
+        $this->initializeSession();
+
+        return $this->render('login-form');
+    }
+
+    public function login()
+    {
+
     }
 
     public function exam()

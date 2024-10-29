@@ -14,6 +14,9 @@ try {
     // Define routes
     $router->get('/', '\App\Controllers\HomeController@index');
 
+    $router->get('/login', '\App\Controllers\ExamController@loginForm');
+    $router->post('/login', '\App\Controllers\ExamController@login');
+
     $router->get('/register', '\App\Controllers\ExamController@registrationForm');
     $router->post('/register', '\App\Controllers\ExamController@register');
     $router->get('/exam', '\App\Controllers\ExamController@exam');
