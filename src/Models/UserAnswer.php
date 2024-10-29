@@ -7,18 +7,40 @@ use \PDO;
 
 class UserAnswer extends BaseModel
 {
-    public function save($data) {
+    protected $user_id;
+    protected $answers;
+
+    public function save($user_id, $answers)
+    {
+        $this->user_id = $user_id;
+        $this->answers = $answers;
+
         $sql = "INSERT INTO users_answers
                 SET
                     user_id=:user_id,
                     answers=:answers";        
         $statement = $this->db->prepare($sql);
         $statement->execute([
-            'user_id' => $data['user_id'],
-            'answers' => $data['answers']
+            'user_id' => $user_id,
+            'answers' => $answers
         ]);
     
         return $statement->rowCount();
+    }
+
+    public function saveAttempt($user_id, $exam_items, $score)
+    {
+        $sql = "INSERT INTO exam_attempts
+                SET
+                    user_id=:user_id,
+                    exam_items=:exam_items,
+                    score=:score";   
+        $statement = $this->db->prepare($sql);
+        $statement->execute([
+            'user_id' => $user_id,
+            'exam_items' => $exam_items,
+            'score' => $score
+        ]);
     }
 
 }

@@ -45,4 +45,26 @@ class Question extends BaseModel
         return $result;
     }
 
+    public function getTotalQuestions()
+    {
+        $sql = "SELECT COUNT(id) AS total_questions FROM questions";
+        $statement = $this->db->prepare($sql);
+        $statement->execute();
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+        return $result['total_questions'];
+    }
+
+    public function computeScore($answers)
+    {
+        $score = 0;
+        $questions = $this->getAllQuestions();
+        foreach ($questions as $question) {
+            $user_answer = $answers[$question['item_number']];
+            if ($user_answer == $question['correct_answer']) {
+                $score++;
+            }
+        }
+        return $score;
+    }
+
 }

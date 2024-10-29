@@ -29,7 +29,7 @@ class User extends BaseModel
         return password_hash($password, PASSWORD_DEFAULT);
     }
 
-    public function getPassword($email)
+    public function verifyAccess($email, $password)
     {
         $sql = "SELECT password_hash FROM users WHERE email = :email";
         $statement = $this->db->prepare($sql);
@@ -37,7 +37,11 @@ class User extends BaseModel
             'email' => $email
         ]);
         $result = $statement->fetch(PDO::FETCH_ASSOC);
-        return $result;
+        if (empty($result)) {
+            return false;
+        }
+
+        return password_verify($password, $result['password_hash']);
     }
 
     public function getAllUsers()

@@ -52,12 +52,20 @@ class ExamController extends BaseController
         // if there are no more questions, save the answers
         if (is_null($question) || !$question) {
             $user_id = $_SESSION['user_id'];
-            $answers = json_encode($_SESSION['answers']);
+            $json_answers = json_encode($_SESSION['answers']);
+
+            error_log('FINISHED EXAM, SAVING ANSWERS');
+            error_log('USER ID = ' . $user_id);
+            error_log('ANSWERS = ' . $json_answers);
+
             $userAnswerObj = new UserAnswer();
             $userAnswerObj->save(
                 $user_id,
-                $answers
+                $json_answers
             );
+            $score = $questionObj->computeScore($_SESSION['answers']);
+            $items = $questionObj->getTotalQuestions();
+            $userAnswerObj->saveAttempt($user_id, $items, $score);
 
             header("Location: /result");
             exit;
@@ -79,8 +87,10 @@ class ExamController extends BaseController
             $question['choices'] = json_decode($question['choices']);
             $question['user_answer'] = $answers[$question['item_number']];
         }
-        $data['total_score'] = 0;
-        $data['question_items'] = 0;
+        $data['total_score'] = $questionObj->computeScore($_SESSION['answers']);
+        $data['question_items'] = $questionObj->getTotalQuestions();
+
+        session_destroy();
 
         return $this->render('result', $data);
     }
