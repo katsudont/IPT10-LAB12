@@ -36,21 +36,24 @@ class UserAnswer extends BaseModel
         return $statement->rowCount();
     }
 
-    public function saveAttempt($user_id, $exam_items, $score)
+    public function saveAttempt($user_id, $exam_items, $exam_score)
     {
         $sql = "INSERT INTO exam_attempts
                 SET
                     user_id=:user_id,
                     exam_items=:exam_items,
-                    score=:score";   
+                    exam_score=:exam_score";  
+    
         $statement = $this->db->prepare($sql);
         $statement->execute([
             'user_id' => $user_id,
             'exam_items' => $exam_items,
-            'score' => $score
+            'exam_score' => $exam_score
         ]);
+        
         return $this->db->lastInsertId();
     }
+    
 
     public function exportData($attempt_id) {
         $sql = "
@@ -88,7 +91,7 @@ class UserAnswer extends BaseModel
     public function getAllExamAttempts()
     {
         $sql = "SELECT users.complete_name, users.email, exam_attempts.attempt_date, 
-                       exam_attempts.exam_items, exam_attempts.score, exam_attempts.id as attempt_id
+                       exam_attempts.exam_items, exam_attempts.exam_score, exam_attempts.id as attempt_id
                 FROM exam_attempts
                 INNER JOIN users ON exam_attempts.user_id = users.id";
                 

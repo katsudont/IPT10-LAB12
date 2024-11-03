@@ -122,9 +122,9 @@ class ExamController extends BaseController
             error_log('ANSWERS = ' . $json_answers);
 
             $userAnswerObj = new UserAnswer();
-            $score = $questionObj->computeScore($_SESSION['answers']);
+            $exam_score = $questionObj->computeScore($_SESSION['answers']);
             $items = $questionObj->getTotalQuestions();
-            $attempt_Id = $userAnswerObj->saveAttempt($user_id, $items, $score);
+            $attempt_Id = $userAnswerObj->saveAttempt($user_id, $items, $exam_score);
             $userAnswerObj->save(
                 $user_id,
                 $json_answers,
@@ -170,7 +170,7 @@ class ExamController extends BaseController
         
         
         // Render the data in the view
-        return $this->render('exam-attempts', ['attempts' => $attempts]);
+        return $this->render('examinees', ['attempts' => $attempts]);
     }
 
     public function exportToPDF($attempt_id)

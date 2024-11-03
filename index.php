@@ -30,10 +30,3 @@ global $conn;
     // Run it!
     $router->run();
 
-// } catch (Exception $e) {
-
-//     echo json_encode([
-//         'error' => $e->getMessage()
-//     ]);
-
-// }
