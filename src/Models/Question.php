@@ -10,7 +10,7 @@ class Question extends BaseModel
     public function save($data) {
         $sql = "INSERT INTO questions 
                 SET
-                    item_number=:item_number,
+                    question_item_number=:item_number,
                     question=:question,
                     choices=:choices,
                     correct_answer=:correct_answer";        
@@ -21,13 +21,14 @@ class Question extends BaseModel
             'choices' => $data['choices'],
             'correct_answer' => $data['correct_answer']
         ]);
-
+    
         return $statement->rowCount();
     }
+    
 
     public function getQuestion($item_number)
     {
-        $sql = "SELECT * FROM questions WHERE item_number = :item_number";
+        $sql = "SELECT * FROM questions WHERE question_item_number = :item_number";
         $statement = $this->db->prepare($sql);
         $statement->execute([
             'item_number' => $item_number
@@ -35,6 +36,7 @@ class Question extends BaseModel
         $result = $statement->fetch(PDO::FETCH_ASSOC);
         return $result;
     }
+    
 
     public function getAllQuestions()
     {

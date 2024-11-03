@@ -3,11 +3,22 @@
 namespace App\Controllers;
 
 use App\Models\Question;
-use App\Models\User;
 use App\Models\UserAnswer;
+use App\Models\User;
+use App\Models\ExamAttempt;
+use \PDO;
+require 'vendor/autoload.php';
+use Fpdf\Fpdf;
 
 class ExamController extends BaseController
 {
+    public function loginForm()
+    {
+        $this->initializeSession();
+
+        return $this->render('login-form');
+    }
+
     public function registrationForm()
     {
         $this->initializeSession();
@@ -19,41 +30,67 @@ class ExamController extends BaseController
     {
         $this->initializeSession();
         $data = $_POST;
+        // Save the registration to database
+        $user = new User();
+        $result = $user->save($data);
+
+        if ($result['row_count'] > 0) {
+           
+            $_SESSION['user_id'] = $result['last_insert_id']; 
+            $_SESSION['complete_name'] = $data['complete_name'];
+            $_SESSION['email'] = $data['email'];
+            $_SESSION['password'] = $data['password'];
     
-        try {
-            // Save the registration to the database
-            $user = new User();
-            $save_result = $user->save($data);
-    
-            if ($save_result > 0) {
-                // Set session variables only after successful registration
-                $_SESSION['user_id'] = $save_result; // Use the actual user ID from the database
-                $_SESSION['complete_name'] = $data['complete_name'];
-                $_SESSION['email'] = $data['email'];
-    
-                return $this->render('login-form'); // Registration success page
-            } else {
-                throw new \Exception("There was an error during registration. Please try again.");
-            }
-        } catch (\Exception $e) {
-            echo "Error: " . $e->getMessage();
+           
+            return $this->render('login-form', $data);
+
         }
     }
 
-    public function loginForm()
-    {
+    public function login(){
         $this->initializeSession();
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = $_POST;
 
-        return $this->render('login-form');
+        // Create an instance of the User model
+        $user = new User();
+        
+        // Verify user credentials
+        if ($user->verifyAccess($data['email'], $data['password'])) {
+            // Fetch user data using the method we just created
+            $sql = "SELECT id, complete_name, email FROM users WHERE email = :email";
+            $statement = $user->getDbConnection()->prepare($sql); // Use getDbConnection() instead of accessing $db directly
+            $statement->execute(['email' => $data['email']]);
+            $userData = $statement->fetch(PDO::FETCH_ASSOC);
+            
+            // Store user data in session
+            $_SESSION['user_id'] = $userData['id'];
+            $_SESSION['complete_name'] = $userData['complete_name'];
+            $_SESSION['email'] = $userData['email'];
+
+            // Prepare data for the pre-exam Mustache template
+            $templateData = [
+                'complete_name' => $userData['complete_name'],
+                'email' => $userData['email'],
+            ];
+
+            // Render the pre-exam page with user data
+            return $this->render('pre-exam', $templateData); // Pass user data to Mustache template
+        } else {
+            // Handle invalid login (optional)
+            $_SESSION['error'] = "Invalid email or password.";
+            return $this->render('login'); // Show login form again
+        }
     }
 
-    public function login()
-    {
-
+    // If not a POST request, show the login form
+    return $this->render('login'); // Show login form
     }
 
     public function exam()
     {
+        
         $this->initializeSession();
         $item_number = 1;
 
@@ -85,13 +122,15 @@ class ExamController extends BaseController
             error_log('ANSWERS = ' . $json_answers);
 
             $userAnswerObj = new UserAnswer();
-            $userAnswerObj->save(
-                $user_id,
-                $json_answers
-            );
             $score = $questionObj->computeScore($_SESSION['answers']);
             $items = $questionObj->getTotalQuestions();
-            $userAnswerObj->saveAttempt($user_id, $items, $score);
+            $attempt_Id = $userAnswerObj->saveAttempt($user_id, $items, $score);
+            $userAnswerObj->save(
+                $user_id,
+                $json_answers,
+                $attempt_Id
+            );
+            
 
             header("Location: /result");
             exit;
@@ -120,4 +159,61 @@ class ExamController extends BaseController
 
         return $this->render('result', $data);
     }
+
+    public function displayExamAttempts()
+    {
+        // Initialize the ExamAttempt model
+        $examAttemptModel = new UserAnswer();
+        
+        // Fetch all exam attempts
+        $attempts = $examAttemptModel->getAllExamAttempts();
+        
+        
+        // Render the data in the view
+        return $this->render('exam-attempts', ['attempts' => $attempts]);
+    }
+
+    public function exportToPDF($attempt_id)
+    {
+        // Initialize Course object
+        $obj = new UserAnswer();
+        // Fetch attempt data for the specific attempt ID
+        $data = $obj->exportData($attempt_id); // Fetch the single attempt data
+        var_dump($data);
+        
+        // Create an instance of FPDF
+        $pdf = new FPDF();
+        $pdf->AddPage();
+
+        // Set PDF Title
+        $pdf->SetFont('Arial', 'B', 16);
+        $pdf->Cell(190, 10, 'Examinee Attempt Details', 0, 1, 'C');
+        $pdf->Ln(10);
+
+        // Add Examinee Information
+        $pdf->SetFont('Arial', '', 12);
+        $pdf->Cell(50, 10, 'Examinee Name: ' . $data['examinee_name'], 0, 1);
+        $pdf->Cell(50, 10, 'Examinee Email: ' . $data['examinee_email'], 0, 1);
+        $pdf->Cell(50, 10, 'Attempt Date: ' . $data['attempt_date'], 0, 1);
+        $pdf->Cell(50, 10, 'Exam Items: ' . $data['exam_items'], 0, 1);
+        $pdf->Cell(50, 10, 'Exam Score: ' . $data['exam_score'], 0, 1);
+        $pdf->Ln(10); // Line break after examinee info
+
+        // Add Answer Information
+        $pdf->SetFont('Arial', 'B', 14);
+        $pdf->Cell(190, 10, 'Answers Submitted', 0, 1, 'C');
+        $pdf->Ln(5);
+
+        $pdf->SetFont('Arial', '', 12);
+        $pdf->Cell(50, 10, 'Answer ID: ' . $data['answer_id'], 0, 1);
+        $pdf->Cell(50, 10, 'Attempt ID: ' . $data['attempt_id'], 0, 1);
+        $pdf->Cell(50, 10, 'Answers: ' . $data['answers'], 0, 1);
+        $pdf->Cell(50, 10, 'Date Answered: ' . $data['date_answered'], 0, 1);
+        $pdf->Ln(10); // Line break after answers section
+
+        // Output the PDF as a download
+        $pdf->Output('D', 'examinee_attempt_' . $attempt_id . '.pdf');
+    }
+
+
 }
